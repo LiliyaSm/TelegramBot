@@ -4,8 +4,8 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
 
 SQLITE = 'sqlite'
 # Table Names
-USERS           = 'users'
-#ADDRESSES       = 'addresses'
+USERS = 'users'
+
 
 class MyDatabase:
     # http://docs.sqlalchemy.org/en/latest/core/engines.html
@@ -15,6 +15,7 @@ class MyDatabase:
 
     # Main DB Connection Ref Obj
     db_engine = None
+
     def __init__(self, dbtype, username='', password='', dbname=''):
         dbtype = dbtype.lower()
         if dbtype in self.DB_ENGINE.keys():
@@ -23,7 +24,7 @@ class MyDatabase:
             print(self.db_engine)
         else:
             print("DBType is not found in DB_ENGINE")
-    
+
     def create_db_tables(self):
         metadata = MetaData()
         users = Table(USERS, metadata,
@@ -39,8 +40,9 @@ class MyDatabase:
             print(e)
 
     def execute_query(self, query=''):
-        if query == '' : return
-        print (query)
+        if query == '':
+            return
+        print(query)
         with self.db_engine.connect() as connection:
             try:
                 connection.execute(query)
@@ -57,6 +59,6 @@ class MyDatabase:
                 print(e)
             else:
                 for row in result:
-                    print(row) # print(row[0], row[1], row[2])
+                    print(row)  # print(row[0], row[1], row[2])
                 result.close()
         print("\n")

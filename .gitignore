@@ -339,3 +339,8 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+
+# visual studio code folder
+.vscode/*
+
+.venv/pyvenv.cfg
