@@ -1,10 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
-
+from sqlalchemy.sql import select
 
 SQLITE = 'sqlite'
 # Table Names
 USERS = 'users'
+LINKS = 'links'
 
 
 class MyDatabase:
@@ -27,11 +28,17 @@ class MyDatabase:
 
     def create_db_tables(self):
         metadata = MetaData()
-        users = Table(USERS, metadata,
+        self.users = Table(USERS, metadata,
                       Column('id', Integer, primary_key=True),
-                      Column('user_name', String),
+                      Column('user_id', Integer),
+                      Column('link', String),
                       Column('price', Integer)
                       )
+        # links = Table(LINKS, metadata,
+        #               Column('id', Integer, primary_key=True),
+        #               Column('user_name', String),
+        #               Column('price', Integer)
+        #               )
         try:
             metadata.create_all(self.db_engine)
             print("Tables created")
@@ -49,6 +56,17 @@ class MyDatabase:
             except Exception as e:
                 print(e)
 
+    def execute_scalar(self, query=''):
+        if query == '':
+            return
+        print(query)
+        with self.db_engine.connect() as connection:
+            try:
+                result = connection.execute(query).scalar()
+                return result
+            except Exception as e:
+                print(e)
+
     def print_all_data(self, table='', query=''):
         query = query if query != '' else "SELECT * FROM '{}';".format(table)
         print(query)
@@ -62,3 +80,32 @@ class MyDatabase:
                     print(row)  # print(row[0], row[1], row[2])
                 result.close()
         print("\n")
+
+    def data_insert(self, user_id, link, price):
+        # Insert Data
+        if self.search_count(user_id) < 3:
+            query = "INSERT INTO USERS (user_id, link, price) VALUES ({},'{}',{});".format(
+                user_id, link, price)
+            self.execute_query(query)
+            self.print_all_data(USERS)
+            return True
+        else:
+            return False
+
+    def search_count(self, user_id):
+        query = "SELECT COUNT(*) FROM USERS WHERE user_id = {};".format(
+            user_id)
+        count = self.execute_scalar(query)
+        print(count)
+        return count
+
+    def search(self, user_id):
+        s = select([self.users]).where(self.users.c.user_id == user_id)
+        with self.db_engine.connect() as connection:
+            for row in connection.execute(s):                
+                print(row)
+        # query = "SELECT link FROM USERS WHERE user_id = {};".format(
+        #     user_id)
+        # result = self.execute_query(query)
+        # print(result)
+        # return result

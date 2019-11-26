@@ -13,26 +13,23 @@ def main():
 
     dbms = mydatabase.MyDatabase(mydatabase.SQLITE, dbname='mydb.sqlite')
     # Create Tables
-    # dbms.create_db_tables()
+    #dbms.create_db_tables()
 
     # dbms.insert_single_data()
     # dbms.print_all_data(mydatabase.USERS)
 
-    # dbms.sample_query() # simple query
-    # dbms.sample_delete() # delete data
-    # dbms.sample_insert() # insert data
-    # dbms.sample_update() # update data
 
     my_bot = Updater(TG_TOKEN, TG_API_URL, use_context=True)
 
     my_bot.dispatcher.add_handler(CommandHandler('start', sms))
-    
+    my_bot.dispatcher.add_handler(MessageHandler(Filters.regex("Мои подписки"), subscription))
+
     expression = r'(^https://[a-z]{2,3}.avito.ru/.*)'
     # my_bot.dispatcher.add_handler(
     # MessageHandler(Filters.regex(expression), pars))
 
     my_bot.dispatcher.add_handler(
-        ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), start_observation)], 
+        ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), start_observation)],
                             allow_reentry = True,
                             states={
                                 "link": [MessageHandler(Filters.regex(expression), pars),
@@ -46,7 +43,7 @@ def main():
             fallbacks=[MessageHandler(Filters.text | Filters.video | Filters.photo | Filters.document, donot_know)]
         )
     )
-    my_bot.dispatcher.add_handler(MessageHandler(Filters.regex("Мои подписки"), subscription))
+    
 
     my_bot.dispatcher.add_handler(MessageHandler(Filters.text | Filters.video | Filters.photo | Filters.document, donot_know))
     my_bot.start_polling()  # проверяет наличие сбщ с платформы тлг

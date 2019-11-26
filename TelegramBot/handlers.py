@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 from utils import my_keyboard
 from telegram import ReplyKeyboardMarkup
-
+from database import mydatabase
 
 def sms(bot, update):
     print("'/start' was sent!")
@@ -26,8 +26,8 @@ def check_price(html):
     try:
         price = soup.find('span', class_='js-item-price').text
         return price
-    except:
-
+    except Exception as e:
+        print(e)
         return False
 
 
@@ -57,8 +57,23 @@ def pars(bot, update):
 
 
 def answer_yes(bot, update):
-    bot.message.reply_text("Наблюдение установлено!",
-                           reply_markup=my_keyboard())
+    try:
+        dbms = mydatabase.MyDatabase(mydatabase.SQLITE, dbname='mydb.sqlite')
+        user_id = bot.effective_user.id
+        if dbms.data_insert(user_id, update.user_data["link"], update.user_data["price"]):
+
+            bot.message.reply_text("Наблюдение установлено!",
+                                reply_markup=my_keyboard())
+            return ConversationHandler.END
+            
+        else:
+            bot.message.reply_text("уже три ссылки под наблюдением, удалите ненужные",
+                                reply_markup=my_keyboard())
+            
+            return ConversationHandler.END
+
+    except Exception as ex:
+        print(ex)
     return ConversationHandler.END
 
 
@@ -88,4 +103,19 @@ def start_observation(bot, update):
 
 
 def subscription(bot, update):
+    try:
+        dbms = mydatabase.MyDatabase(mydatabase.SQLITE, dbname='mydb.sqlite')
+        dbms.create_db_tables()
+        user_id = bot.effective_user.id
+        if dbms.search(user_id):
+            user_id = bot.effective_user.id
+            bot.message.reply_text("{}".format(result),
+                                reply_markup=my_keyboard())
+            
+        else:
+            bot.message.reply_text("У вас нет подписок")
+
+    except Exception as ex:
+        print(ex)
+    return ConversationHandler.END    
     bot.message.reply_text("У вас нет подписок")
