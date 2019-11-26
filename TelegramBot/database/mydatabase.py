@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, func
 from sqlalchemy.sql import select
 
 SQLITE = 'sqlite'
@@ -28,7 +28,7 @@ class MyDatabase:
 
     def create_db_tables(self):
         metadata = MetaData()
-        self.users = Table(USERS, metadata,
+        self.users = Table(USERS, metadata,   
                       Column('id', Integer, primary_key=True),
                       Column('user_id', Integer),
                       Column('link', String),
@@ -100,10 +100,14 @@ class MyDatabase:
         return count
 
     def search(self, user_id):
-        s = select([self.users]).where(self.users.c.user_id == user_id)
+        s = select([self.users.c.link]).where(self.users.c.user_id == user_id)
+        
         with self.db_engine.connect() as connection:
+            list_of_links = []
             for row in connection.execute(s):                
                 print(row)
+                list_of_links.append(row)
+        return list_of_links
         # query = "SELECT link FROM USERS WHERE user_id = {};".format(
         #     user_id)
         # result = self.execute_query(query)
