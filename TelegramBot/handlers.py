@@ -72,11 +72,11 @@ class Handlers:
                 bot.message.reply_text("уже три ссылки под наблюдением, удалите ненужные",
                                        reply_markup=my_keyboard())
 
-                return ConversationHandler.END
+                return -1
 
         except Exception as ex:
             print(ex)
-        return ConversationHandler.END
+        return -1
 
     def answer_no(self, bot, update):
         bot.message.reply_text("Наблюдение не установлено!",
@@ -88,7 +88,12 @@ class Handlers:
         bot.message.reply_text("это не ссылка!")
 
     def donot_know(self, bot, update):
-        bot.message.reply_text("я не знаю такой команды!")
+        bot.message.reply_text("не понимаю!(не разговор)",
+                            reply_markup=my_keyboard())
+
+    def try_again(self, bot, update):
+        bot.message.reply_text("я не знаю такой команды! (разговор)",
+                            )
 
     def start_observation(self, bot, update):
         reply_keyboard = [['Отмена']]

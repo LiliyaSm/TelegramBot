@@ -45,7 +45,7 @@ def main():
                                                 Filters.regex("Нет"), hd.answer_no)
                                             ]
         },
-            fallbacks=[MessageHandler(Filters.text | Filters.video | Filters.photo | Filters.document, hd.donot_know)]
+            fallbacks=[MessageHandler(Filters.text | Filters.video | Filters.photo | Filters.document, hd.try_again)]
         )
     )
     

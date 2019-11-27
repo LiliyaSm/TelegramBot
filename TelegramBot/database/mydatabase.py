@@ -28,7 +28,7 @@ class MyDatabase:
 
     def create_db_tables(self):
         metadata = MetaData()
-        self.users = Table(USERS, metadata,   
+        self.users = Table(USERS, metadata,
                       Column('id', Integer, primary_key=True),
                       Column('user_id', Integer),
                       Column('link', String),
@@ -93,18 +93,19 @@ class MyDatabase:
             return False
 
     def search_count(self, user_id):
-        query = "SELECT COUNT(*) FROM USERS WHERE user_id = {};".format(
-            user_id)
-        count = self.execute_scalar(query)
-        print(count)
+        # query = "SELECT COUNT(*) FROM USERS WHERE user_id = {};".format(
+            # user_id)
+        query = select([func.count()]).where(self.users.c.user_id == user_id)
+        count=self.db_engine.connect().execute(query).scalar()
+        print(query)
         return count
 
     def search(self, user_id):
-        s = select([self.users.c.link]).where(self.users.c.user_id == user_id)
-        
+        s=select([self.users.c.link]).where(self.users.c.user_id == user_id)
+        print(s)
         with self.db_engine.connect() as connection:
-            list_of_links = []
-            for row in connection.execute(s):                
+            list_of_links=[]
+            for row in connection.execute(s):
                 print(row)
                 list_of_links.append(row)
         return list_of_links
