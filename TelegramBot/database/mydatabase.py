@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, func
 from sqlalchemy.sql import select
+from sqlalchemy.sql import and_, or_, not_
 
 SQLITE = 'sqlite'
 # Table Names
@@ -52,7 +53,7 @@ class MyDatabase:
         print(query)
         with self.db_engine.connect() as connection:
             try:
-                connection.execute(query)
+                return connection.execute(query)
             except Exception as e:
                 print(e)
 
@@ -83,14 +84,13 @@ class MyDatabase:
 
     def data_insert(self, user_id, link, price):
         # Insert Data
-        if self.search_count(user_id) < 3:
-            query = "INSERT INTO USERS (user_id, link, price) VALUES ({},'{}',{});".format(
-                user_id, link, price)
-            self.execute_query(query)
-            self.print_all_data(USERS)
-            return True
-        else:
-            return False
+        
+        #query = "INSERT INTO USERS (user_id, link, price) VALUES ({},{},{});".format(user_id, link, price)
+
+        query = self.users.insert().values(user_id=user_id, link = link, price = price)
+        self.execute_query(query)
+        self.print_all_data(USERS)
+
 
     def search_count(self, user_id):
         # query = "SELECT COUNT(*) FROM USERS WHERE user_id = {};".format(
@@ -101,16 +101,23 @@ class MyDatabase:
         return count
 
     def search(self, user_id):
-        s=select([self.users.c.link]).where(self.users.c.user_id == user_id)
+        s=select([self.users.c.id, self.users.c.link]).where(self.users.c.user_id == user_id)
         print(s)
         with self.db_engine.connect() as connection:
-            list_of_links=[]
-            for row in connection.execute(s):
-                print(row)
-                list_of_links.append(row)
+            list_of_links={row[0]: row[1] for row in connection.execute(s)}
+        print(list_of_links) 
         return list_of_links
-        # query = "SELECT link FROM USERS WHERE user_id = {};".format(
-        #     user_id)
-        # result = self.execute_query(query)
-        # print(result)
-        # return result
+
+    def find_number(self, user_id, link_id):
+        print("link_id", link_id)
+        print(user_id)
+        s=self.users.delete().where(self.users.c.user_id == user_id).where(self.users.c.id == link_id)
+        
+        print(s)
+        result = self.execute_query(s)
+        self.print_all_data(USERS)
+        print("result.rowcount", result.rowcount)
+        if result.rowcount:
+            return True
+        else:
+            return False

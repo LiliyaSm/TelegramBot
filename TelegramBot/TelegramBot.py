@@ -23,22 +23,18 @@ def main():
     my_bot = Updater(TG_TOKEN, TG_API_URL, use_context=True)
     dbms = mydatabase.MyDatabase(mydatabase.SQLITE, dbname='mydb.sqlite')
     hd = handlers.Handlers(dbms)
-    my_bot.dispatcher.add_handler(CommandHandler('start', hd.sms))
-
-
+    my_bot.dispatcher.add_handler(CommandHandler('start', hd.sms))   
     
-    my_bot.dispatcher.add_handler(MessageHandler(Filters.regex("Мои подписки"), hd.subscription))
 
     expression = r'(^https://[a-z]{2,3}.avito.ru/.*)'
-    # my_bot.dispatcher.add_handler(
-    # MessageHandler(Filters.regex(expression), pars))
+
 
     my_bot.dispatcher.add_handler(
         ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), hd.start_observation)],
                             allow_reentry = True,
                             states={
                                 "link": [MessageHandler(Filters.regex(expression), hd.pars),
-                                        MessageHandler(Filters.regex("Отмена"), hd.answer_no),
+                                         MessageHandler(Filters.regex("Отмена"), hd.answer_no),
                                          MessageHandler(Filters.text, hd.not_link)],
                                 "confirm": [MessageHandler(Filters.regex("Да"), hd.answer_yes),
                                             MessageHandler(
@@ -49,6 +45,19 @@ def main():
         )
     )
     
+    my_bot.dispatcher.add_handler(
+        ConversationHandler(entry_points=[MessageHandler(Filters.regex("Мои подписки"), hd.subscription)],
+                            allow_reentry = True,
+                            states={
+                                "management": [MessageHandler(Filters.regex("Удалить"), hd.ask_number),
+                                               MessageHandler(Filters.regex("Отмена"), hd.cancel)],                                         
+                                "link_number": [MessageHandler(Filters.regex(r"([0-9]+)"), hd.delete_link),
+                                                 MessageHandler(Filters.regex("Отмена"), hd.cancel),
+                                           ]
+        },
+            fallbacks=[MessageHandler(Filters.text | Filters.video | Filters.photo | Filters.document, hd.try_again)]
+        )
+    )
 
     my_bot.dispatcher.add_handler(MessageHandler(Filters.text | Filters.video | Filters.photo | Filters.document, hd.donot_know))
     my_bot.start_polling()  # проверяет наличие сбщ с платформы тлг

@@ -62,17 +62,12 @@ class Handlers:
     def answer_yes(self, bot, update):
         try:
             user_id = bot.effective_user.id
-            if self.dbms.data_insert(user_id, update.user_data["link"], update.user_data["price"]):
+            self.dbms.data_insert(user_id, update.user_data["link"], update.user_data["price"])
 
-                bot.message.reply_text("Наблюдение установлено!",
+            bot.message.reply_text("Наблюдение установлено!",
                                        reply_markup=my_keyboard())
-                return -1
+            return -1
 
-            else:
-                bot.message.reply_text("уже три ссылки под наблюдением, удалите ненужные",
-                                       reply_markup=my_keyboard())
-
-                return -1
 
         except Exception as ex:
             print(ex)
@@ -81,7 +76,13 @@ class Handlers:
     def answer_no(self, bot, update):
         bot.message.reply_text("Наблюдение не установлено!",
                                reply_markup=my_keyboard())
-        return ConversationHandler.END
+        return -1
+
+    def cancel(self, bot, update):
+        bot.message.reply_text("Выберете команду",
+                               reply_markup=my_keyboard())
+        return -1
+
 
     def not_link(self, bot, update):
         print(bot.message.text)
@@ -96,27 +97,65 @@ class Handlers:
                             )
 
     def start_observation(self, bot, update):
-        reply_keyboard = [['Отмена']]
-        bot.message.reply_text("пришлите ссылку на товар",
+        user_id = bot.effective_user.id
+        if self.dbms.search_count(user_id) < 3:
+
+            reply_keyboard = [['Отмена']]
+            bot.message.reply_text("пришлите ссылку на товар",
                                reply_markup=ReplyKeyboardMarkup(reply_keyboard,
                                                                 one_time_keyboard=True,
                                                                 resize_keyboard=True))
 
-        return "link"
+            return "link"
+        else:
+            bot.message.reply_text("уже три ссылки под наблюдением, удалите ненужные",
+                                       reply_markup=my_keyboard())
+
+            return -1
+
 
     def subscription(self, bot, update):
         try:
             user_id = bot.effective_user.id
             list_of_links = self.dbms.search(user_id)
+            reply_keyboard = [['Отмена', "Удалить ссылку"]]
             if len(list_of_links) > 0:
-                for link in list_of_links:
-                    bot.message.reply_text("{}".format(link),
-                                           reply_markup=my_keyboard())
-
+                update.user_data["link_id"] = len(list_of_links)
+                for number, link in list_of_links.items():
+                    bot.message.reply_text("{} \n Номер отлеживания {}".format(link, number),
+                               reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                                one_time_keyboard=True,
+                                                                resize_keyboard=True))
             else:
                 bot.message.reply_text("У вас нет подписок")
 
         except Exception as ex:
             print(ex)
-        return ConversationHandler.END
-        bot.message.reply_text("У вас нет подписок")
+        return "management"
+        
+
+    def ask_number(self, bot, update):
+        reply_keyboard = [['Отмена']]
+        bot.message.reply_text("Пришлите номер ссылки для удаления",
+                                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                                one_time_keyboard=True,
+                                                                resize_keyboard=True))
+        
+        return "link_number"
+
+
+    def delete_link(self, bot, update):
+        user_id = bot.effective_user.id
+        update.user_data["link_id"] = bot.message.text
+        if self.dbms.find_number(user_id, update.user_data["link_id"]):
+            bot.message.reply_text("Объявление удалено", 
+                                        reply_markup=my_keyboard())
+            update.user_data["link_id"] = update.user_data["link_id"] - 1
+            if update.user_data["link_id"] > 0:
+                return "ask_again_link_number"
+        else:
+            bot.message.reply_text("Объявление не найдено", 
+            reply_markup=my_keyboard())
+                                        
+
+        return -1
