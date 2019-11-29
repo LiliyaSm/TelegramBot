@@ -11,8 +11,6 @@ import handlers
 
 def main():
 
-
-
     # Create Tables
     #dbms.create_db_tables()
 
@@ -27,7 +25,6 @@ def main():
     
 
     expression = r'(^https://[a-z]{2,3}.avito.ru/.*)'
-
 
     my_bot.dispatcher.add_handler(
         ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), hd.start_observation)],
@@ -53,7 +50,10 @@ def main():
                                                MessageHandler(Filters.regex("Отмена"), hd.cancel)],                                         
                                 "link_number": [MessageHandler(Filters.regex(r"([0-9]+)"), hd.delete_link),
                                                  MessageHandler(Filters.regex("Отмена"), hd.cancel),
-                                           ]
+                                           ],
+                                "ask_again_link_number": [MessageHandler(Filters.regex("Да"), hd.ask_number),
+                                            MessageHandler(
+                                                Filters.regex("Нет"), hd.cancel)]
         },
             fallbacks=[MessageHandler(Filters.text | Filters.video | Filters.photo | Filters.document, hd.try_again)]
         )

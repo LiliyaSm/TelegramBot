@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
-from utils import my_keyboard
+from utils import my_keyboard, cancel_keyboard
 from telegram import ReplyKeyboardMarkup
 from database import mydatabase
 
@@ -51,12 +51,9 @@ class Handlers:
                                                                     one_time_keyboard=True,
                                                                     resize_keyboard=True))
             return "confirm"
-        else:
-            reply_keyboard = [['Отмена']]
-            bot.message.reply_text("цена на странице не найдена :( Попробуйте ещё",
-                                   reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                                    one_time_keyboard=True,
-                                                                    resize_keyboard=True))
+        else:            
+            bot.message.reply_text("Цена на странице не найдена :( Попробуйте ещё",
+                                   reply_markup=cancel_keyboard())
             return "link"
 
     def answer_yes(self, bot, update):
@@ -64,7 +61,7 @@ class Handlers:
             user_id = bot.effective_user.id
             self.dbms.data_insert(user_id, update.user_data["link"], update.user_data["price"])
 
-            bot.message.reply_text("Наблюдение установлено!",
+            bot.message.reply_text("Наблюдение установлено! При изменении цены вам придёт уведомление",
                                        reply_markup=my_keyboard())
             return -1
 
@@ -89,22 +86,18 @@ class Handlers:
         bot.message.reply_text("это не ссылка!")
 
     def donot_know(self, bot, update):
-        bot.message.reply_text("не понимаю!(не разговор)",
+        bot.message.reply_text("Я вас не понимаю!",
                             reply_markup=my_keyboard())
 
     def try_again(self, bot, update):
-        bot.message.reply_text("я не знаю такой команды! (разговор)",
+        bot.message.reply_text("я не знаю такой команды!",
                             )
 
     def start_observation(self, bot, update):
         user_id = bot.effective_user.id
-        if self.dbms.search_count(user_id) < 3:
-
-            reply_keyboard = [['Отмена']]
+        if self.dbms.search_count(user_id) < 3:            
             bot.message.reply_text("пришлите ссылку на товар",
-                               reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                                one_time_keyboard=True,
-                                                                resize_keyboard=True))
+                               reply_markup=cancel_keyboard())
 
             return "link"
         else:
@@ -120,14 +113,16 @@ class Handlers:
             list_of_links = self.dbms.search(user_id)
             reply_keyboard = [['Отмена', "Удалить ссылку"]]
             if len(list_of_links) > 0:
-                update.user_data["link_id"] = len(list_of_links)
+                update.user_data["number_links"] = len(list_of_links)
                 for number, link in list_of_links.items():
                     bot.message.reply_text("{} \n Номер отлеживания {}".format(link, number),
                                reply_markup=ReplyKeyboardMarkup(reply_keyboard,
                                                                 one_time_keyboard=True,
                                                                 resize_keyboard=True))
             else:
-                bot.message.reply_text("У вас нет подписок")
+                bot.message.reply_text("У вас нет подписок",
+                                    reply_markup=my_keyboard())
+                return -1
 
         except Exception as ex:
             print(ex)
@@ -135,27 +130,36 @@ class Handlers:
         
 
     def ask_number(self, bot, update):
-        reply_keyboard = [['Отмена']]
         bot.message.reply_text("Пришлите номер ссылки для удаления",
-                                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                                one_time_keyboard=True,
-                                                                resize_keyboard=True))
+                                       reply_markup=cancel_keyboard())
         
         return "link_number"
 
 
     def delete_link(self, bot, update):
+        reply_keyboard = [['Да', 'Нет']]
         user_id = bot.effective_user.id
         update.user_data["link_id"] = bot.message.text
         if self.dbms.find_number(user_id, update.user_data["link_id"]):
-            bot.message.reply_text("Объявление удалено", 
-                                        reply_markup=my_keyboard())
-            update.user_data["link_id"] = update.user_data["link_id"] - 1
-            if update.user_data["link_id"] > 0:
+            bot.message.reply_text("Объявление удалено")
+            update.user_data["number_links"] = update.user_data["number_links"] - 1
+            if update.user_data["number_links"] > 0:
+                
+                bot.message.reply_text("Продолжить удаление подписок?",
+                                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                                one_time_keyboard=True,
+                                                                resize_keyboard=True))
                 return "ask_again_link_number"
+            else:
+                bot.message.reply_text("У вас больше нет подписок!",
+                                                       reply_markup=my_keyboard())
+                return -1
         else:
             bot.message.reply_text("Объявление не найдено", 
             reply_markup=my_keyboard())
-                                        
-
+            bot.message.reply_text("Продолжить удаление подписок?",
+                                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                                one_time_keyboard=True,
+                                                                resize_keyboard=True))
+            return "ask_again_link_number"
         return -1
