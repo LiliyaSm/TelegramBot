@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 from utils import my_keyboard, cancel_keyboard
-from telegram import ReplyKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from database import mydatabase
 
 
@@ -51,7 +51,7 @@ class Handlers:
                                                                     one_time_keyboard=True,
                                                                     resize_keyboard=True))
             return "confirm"
-        else:            
+        else:
             bot.message.reply_text("Цена на странице не найдена :( Попробуйте ещё",
                                    reply_markup=cancel_keyboard())
             return "link"
@@ -59,12 +59,12 @@ class Handlers:
     def answer_yes(self, bot, update):
         try:
             user_id = bot.effective_user.id
-            self.dbms.data_insert(user_id, update.user_data["link"], update.user_data["price"])
+            self.dbms.data_insert(
+                user_id, update.user_data["link"], update.user_data["price"])
 
             bot.message.reply_text("Наблюдение установлено! При изменении цены вам придёт уведомление",
-                                       reply_markup=my_keyboard())
+                                   reply_markup=my_keyboard())
             return -1
-
 
         except Exception as ex:
             print(ex)
@@ -80,86 +80,117 @@ class Handlers:
                                reply_markup=my_keyboard())
         return -1
 
-
     def not_link(self, bot, update):
         print(bot.message.text)
         bot.message.reply_text("это не ссылка!")
 
     def donot_know(self, bot, update):
-        bot.message.reply_text("Я вас не понимаю!",
-                            reply_markup=my_keyboard())
+        bot.message.reply_text("Я вас не понимаю! Нажмите на нужную кнопку",
+                               reply_markup=my_keyboard())
 
     def try_again(self, bot, update):
-        bot.message.reply_text("я не знаю такой команды!",
-                            )
+        bot.message.reply_text("Я не знаю такой команды!",
+                               )
 
     def start_observation(self, bot, update):
         user_id = bot.effective_user.id
-        if self.dbms.search_count(user_id) < 3:            
+        if self.dbms.search_count(user_id) < 3:
             bot.message.reply_text("пришлите ссылку на товар",
-                               reply_markup=cancel_keyboard())
+                                   reply_markup=cancel_keyboard())
 
             return "link"
         else:
             bot.message.reply_text("уже три ссылки под наблюдением, удалите ненужные",
-                                       reply_markup=my_keyboard())
+                                   reply_markup=my_keyboard())
 
             return -1
 
+
+    def delete_all(self, bot, update):
+        user_id = bot.effective_user.id
+        if self.dbms.delete_link(user_id):
+
+            bot.message.reply_text("У вас больше нет подписок!",
+                               reply_markup=my_keyboard())
+
+        else:
+            pass
+        return -1
+
+    # def delete_link(self, bot, update):
+    #     reply_keyboard = [['Да', 'Нет']]
+    #     user_id = bot.effective_user.id
+    #     update.user_data["link_id"] = bot.message.text
+    #     if self.dbms.find_number(user_id, update.user_data["link_id"]):
+    #         bot.message.reply_text("Объявление удалено")
+    #         update.user_data["number_links"] = update.user_data["number_links"] - 1
+    #         if update.user_data["number_links"] > 0:
+
+    #             bot.message.reply_text("Продолжить удаление подписок?",
+    #                                    reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+    #                                                                     one_time_keyboard=True,
+    #                                                                     resize_keyboard=True))
+    #             return "ask_again_link_number"
+    #         else:
+    #             bot.message.reply_text("У вас больше нет подписок!",
+    #                                    reply_markup=my_keyboard())
+    #             return -1
+    #     else:
+    #         bot.message.reply_text("Объявление не найдено",
+    #                                reply_markup=my_keyboard())
+    #         bot.message.reply_text("Продолжить удаление подписок?",
+    #                                reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+    #                                                                 one_time_keyboard=True,
+    #                                                                 resize_keyboard=True))
+    #         return "ask_again_link_number"
+    #     return -1
 
     def subscription(self, bot, update):
         try:
             user_id = bot.effective_user.id
             list_of_links = self.dbms.search(user_id)
-            reply_keyboard = [['Отмена', "Удалить ссылку"]]
             if len(list_of_links) > 0:
-                update.user_data["number_links"] = len(list_of_links)
-                for number, link in list_of_links.items():
-                    bot.message.reply_text("{} \n Номер отлеживания {}".format(link, number),
-                               reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                                one_time_keyboard=True,
-                                                                resize_keyboard=True))
+                reply_keyboard = [['Назад', 'Отписаться от всего']]
+
+                #update.user_data["number_links"] = len(list_of_links)
+
+                for key, link in list_of_links.items():
+                    keyboard = [[InlineKeyboardButton(
+                    "Отписаться от рассылки по этому товару", callback_data='Delete:' + str(key))]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                    bot.message.reply_text("{}".format(link),
+                                           reply_markup=reply_markup)
+                
+                bot.message.reply_text("Для отписки от *всех* рассылок нажмите кнопку",
+                                        parse_mode=ParseMode.MARKDOWN,
+                                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                                        one_time_keyboard=True,
+                                                                        resize_keyboard=True,
+                                                                       ))
+                return "delete_all"
             else:
                 bot.message.reply_text("У вас нет подписок",
-                                    reply_markup=my_keyboard())
+                                       reply_markup=my_keyboard())
                 return -1
 
         except Exception as ex:
             print(ex)
-        return "management"
         
 
-    def ask_number(self, bot, update):
-        bot.message.reply_text("Пришлите номер ссылки для удаления",
-                                       reply_markup=cancel_keyboard())
-        
-        return "link_number"
-
-
-    def delete_link(self, bot, update):
-        reply_keyboard = [['Да', 'Нет']]
-        user_id = bot.effective_user.id
-        update.user_data["link_id"] = bot.message.text
-        if self.dbms.find_number(user_id, update.user_data["link_id"]):
-            bot.message.reply_text("Объявление удалено")
-            update.user_data["number_links"] = update.user_data["number_links"] - 1
-            if update.user_data["number_links"] > 0:
-                
-                bot.message.reply_text("Продолжить удаление подписок?",
-                                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                                one_time_keyboard=True,
-                                                                resize_keyboard=True))
-                return "ask_again_link_number"
-            else:
-                bot.message.reply_text("У вас больше нет подписок!",
-                                                       reply_markup=my_keyboard())
-                return -1
+    def button_del(self, update, context):
+        print(context.match)
+        user_id = update.effective_user.id
+        query = update.callback_query
+        link_id = context.match[2]                                                   #query.message.text
+        print(link_id)
+        if self.dbms.delete_link(user_id, link_id):
+            keyboard = [[InlineKeyboardButton(
+                "Удалено", callback_data='Done')]]
+            context.bot.edit_message_reply_markup(
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                chat_id=query.message.chat.id,
+                message_id=query.message.message_id,
+            )            
         else:
-            bot.message.reply_text("Объявление не найдено", 
-            reply_markup=my_keyboard())
-            bot.message.reply_text("Продолжить удаление подписок?",
-                                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                                one_time_keyboard=True,
-                                                                resize_keyboard=True))
-            return "ask_again_link_number"
-        return -1
+            pass

@@ -108,11 +108,11 @@ class MyDatabase:
         print(list_of_links) 
         return list_of_links
 
-    def find_number(self, user_id, link_id):
-        print("link_id", link_id)
-        print(user_id)
-        s=self.users.delete().where(self.users.c.user_id == user_id).where(self.users.c.id == link_id)
-        
+    def delete_link(self, user_id, link_id = ""):       
+        if link_id:
+            s=self.users.delete().where(self.users.c.user_id == user_id).where(self.users.c.id == link_id)
+        else:
+            s=self.users.delete().where(self.users.c.user_id == user_id)    
         print(s)
         result = self.execute_query(s)
         self.print_all_data(USERS)
@@ -121,3 +121,4 @@ class MyDatabase:
             return True
         else:
             return False
+            
