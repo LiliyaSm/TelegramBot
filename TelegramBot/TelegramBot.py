@@ -24,10 +24,12 @@ def main():
     hd = handlers.Handlers(dbms)
     my_bot.dispatcher.add_handler(CommandHandler('start', hd.sms))
 
-    expression = r'(https://[a-z]{1,4}.avito.ru/.*)'
+    hd.hour_pars()
+    expression = r'(https://[a-z]{1,3}.avito.ru/.*)'
 
     my_bot.dispatcher.add_handler(
-        ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), hd.start_observation)],
+        ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), hd.start_observation)
+                                          ],
                             allow_reentry=True,
                             states={
                                 "link": [MessageHandler(Filters.regex(expression), hd.pars),
@@ -49,9 +51,9 @@ def main():
                             allow_reentry=True,
                             states={
                                 "delete_all": [MessageHandler(Filters.regex("Отписаться от всего"), hd.delete_all),
-                                              MessageHandler(Filters.regex("Назад"), hd.cancel)]
+                                               MessageHandler(Filters.regex("Назад"), hd.cancel)]
 
-                            },
+        },
             fallbacks=[MessageHandler(
                 Filters.text | Filters.video | Filters.photo | Filters.document, hd.try_again)]
         )
@@ -60,9 +62,9 @@ def main():
     my_bot.dispatcher.add_handler(MessageHandler(
         Filters.text | Filters.video | Filters.photo | Filters.document, hd.donot_know))
 
-    my_bot.dispatcher.add_handler(CallbackQueryHandler(hd.button_del, pattern = r'(Delete:)(\d+)'
-                                                         )) #Ловим коллбэк от кнопки. Нам передается объект CallbackQuery который содержит поле data и message. Сейчас нам нужно из даты достать наше слово которое мы передали в атрибуте callback_data
-                                                    
+    my_bot.dispatcher.add_handler(CallbackQueryHandler(hd.button_del, pattern=r'(Delete:)(\d+)'
+                                                       ))  # Ловим коллбэк от кнопки. Нам передается объект CallbackQuery который содержит поле data и message. Сейчас нам нужно из даты достать наше слово которое мы передали в атрибуте callback_data
+
     my_bot.start_polling()  # Start the Bot
     my_bot.idle()      # Run the bot until the user presses Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT

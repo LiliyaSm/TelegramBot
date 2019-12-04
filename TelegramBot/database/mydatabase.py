@@ -2,6 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, func
 from sqlalchemy.sql import select
 from sqlalchemy.sql import and_, or_, not_
+from datetime import datetime, timedelta
+import sqlalchemy as sa
+
 
 SQLITE = 'sqlite'
 # Table Names
@@ -30,11 +33,15 @@ class MyDatabase:
     def create_db_tables(self):
         metadata = MetaData()
         self.users = Table(USERS, metadata,
-                      Column('id', Integer, primary_key=True),
-                      Column('user_id', Integer),
-                      Column('link', String),
-                      Column('price', Integer)
-                      )
+                           Column('id', Integer, primary_key=True),
+                           Column('user_id', Integer),
+                           Column('link', String),
+                           Column('price', String),
+                           Column('created_at', sa.DateTime(),
+                                  default=datetime.utcnow),
+                           Column('updated_at', sa.DateTime(),
+                                  default=datetime.utcnow),
+                           )
         # links = Table(LINKS, metadata,
         #               Column('id', Integer, primary_key=True),
         #               Column('user_name', String),
@@ -84,35 +91,35 @@ class MyDatabase:
 
     def data_insert(self, user_id, link, price):
         # Insert Data
-        
+
         #query = "INSERT INTO USERS (user_id, link, price) VALUES ({},{},{});".format(user_id, link, price)
 
-        query = self.users.insert().values(user_id=user_id, link = link, price = price)
+        query = self.users.insert().values(user_id=user_id, link=link, price=price)
         self.execute_query(query)
         self.print_all_data(USERS)
 
-
     def search_count(self, user_id):
-        # query = "SELECT COUNT(*) FROM USERS WHERE user_id = {};".format(
-            # user_id)
+        # query = "SELECT COUNT(*) FROM USERS WHERE user_id = {};".format(user_id) 
         query = select([func.count()]).where(self.users.c.user_id == user_id)
-        count=self.db_engine.connect().execute(query).scalar()
+        count = self.db_engine.connect().execute(query).scalar()
         print(query)
         return count
 
     def search(self, user_id):
-        s=select([self.users.c.id, self.users.c.link]).where(self.users.c.user_id == user_id)
+        s = select([self.users.c.id, self.users.c.link]).where(
+            self.users.c.user_id == user_id)
         print(s)
         with self.db_engine.connect() as connection:
-            list_of_links={row[0]: row[1] for row in connection.execute(s)}
-        print(list_of_links) 
+            list_of_links = {row[0]: row[1] for row in connection.execute(s)}
+        print(list_of_links)
         return list_of_links
 
-    def delete_link(self, user_id, link_id = ""):       
+    def delete_link(self, user_id, link_id=""):
         if link_id:
-            s=self.users.delete().where(self.users.c.user_id == user_id).where(self.users.c.id == link_id)
+            s = self.users.delete().where(self.users.c.user_id ==
+                                          user_id).where(self.users.c.id == link_id)
         else:
-            s=self.users.delete().where(self.users.c.user_id == user_id)    
+            s = self.users.delete().where(self.users.c.user_id == user_id)
         print(s)
         result = self.execute_query(s)
         self.print_all_data(USERS)
@@ -121,4 +128,24 @@ class MyDatabase:
             return True
         else:
             return False
-            
+
+    def time_check(self):
+        now = datetime.utcnow()
+        hour_ago = now - timedelta(minutes=1)
+        #s = Payment.query.filter(Payment.due_date >= todays_datetime).all()
+        s = select([self.users.c.id, self.users.c.link, self.users.c.price]).where(
+            self.users.c.updated_at < hour_ago)
+        to_pars = []
+        print(s)
+        with self.db_engine.connect() as connection:
+            for row in connection.execute(s):
+                to_pars.append((row[0], row[1], row[2]))  # id, link, price
+
+        print(to_pars)
+        return to_pars
+
+    def update_price(self, id, new_price):
+        now = datetime.utcnow()
+        s = self.users.update().values(
+            price=new_price, updated_at=now).where(self.users.c.id == id)
+        self.execute_query(s)
