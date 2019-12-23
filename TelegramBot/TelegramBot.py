@@ -1,33 +1,45 @@
-from telegram.ext import Updater
-from settings import TG_TOKEN, TG_API_URL
-from telegram.ext import CommandHandler, MessageHandler, ConversationHandler, CallbackQueryHandler
-from telegram import InlineKeyboardButton
-from telegram.ext import Filters
-import json
 import csv
+import json
 import re
-from database import mydatabase
-from handlers import *
-import handlers
+import threading
+from telegram import InlineKeyboardButton  # python-telegram-bot
+from telegram.ext import (CallbackQueryHandler, CommandHandler,
+                          ConversationHandler, Filters, MessageHandler,
+                          Updater)
 
+import handlers
+import mydatabase  
+from handlers import Handlers, send_alarm
+from settings import TG_API_URL, TG_TOKEN
+import telegram
+import logging
+import logging.config
 
 def main():
-
     # Create Tables
     # dbms.create_db_tables()
 
     # dbms.insert_single_data()
     # dbms.print_all_data(mydatabase.USERS)
 
-    my_bot = Updater(TG_TOKEN, TG_API_URL, use_context=True)
-    dbms = mydatabase.MyDatabase(mydatabase.SQLITE, dbname='mydb.sqlite')
-    hd = handlers.Handlers(dbms)
-    my_bot.dispatcher.add_handler(CommandHandler('start', hd.sms))
+    logger.info("Program started")
 
-    hd.hour_pars()
+    updater = Updater(TG_TOKEN, TG_API_URL, use_context=True)
+    dbms = mydatabase.MyDatabase()
+    hd = handlers.Handlers(dbms)
+    updater.dispatcher.add_handler(CommandHandler('start', hd.sms))
+
+    bot = telegram.Bot(token=TG_TOKEN, base_url=TG_API_URL)
+    
+    dbms.hour_pars(lambda notification: send_alarm(
+        bot, notification))
+
+    dbms.del_old(lambda notification: send_alarm(
+      bot, notification))
+
     expression = r'(https://[a-z]{1,3}.avito.ru/.*)'
 
-    my_bot.dispatcher.add_handler(
+    updater.dispatcher.add_handler(
         ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), hd.start_observation)
                                           ],
                             allow_reentry=True,
@@ -46,7 +58,7 @@ def main():
         )
     )
 
-    my_bot.dispatcher.add_handler(
+    updater.dispatcher.add_handler(
         ConversationHandler(entry_points=[MessageHandler(Filters.regex("Мои подписки"), hd.subscription)],
                             allow_reentry=True,
                             states={
@@ -59,16 +71,20 @@ def main():
         )
     )
 
-    my_bot.dispatcher.add_handler(MessageHandler(
+    updater.dispatcher.add_handler(MessageHandler(
         Filters.text | Filters.video | Filters.photo | Filters.document, hd.donot_know))
 
-    my_bot.dispatcher.add_handler(CallbackQueryHandler(hd.button_del, pattern=r'(Delete:)(\d+)'
+    updater.dispatcher.add_handler(CallbackQueryHandler(hd.button_del, pattern=r'(Delete:)(\d+)'
+
                                                        ))  # Ловим коллбэк от кнопки. Нам передается объект CallbackQuery который содержит поле data и message. Сейчас нам нужно из даты достать наше слово которое мы передали в атрибуте callback_data
 
-    my_bot.start_polling()  # Start the Bot
-    my_bot.idle()      # Run the bot until the user presses Ctrl-C or the process receives SIGINT,
+    updater.start_polling()  # Start the Bot
+    updater.idle()      # Run the bot until the user presses Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT
 
 
 if __name__ == '__main__':
+    logging.config.fileConfig(
+        fname='file.conf', disable_existing_loggers=False)
+    logger = logging.getLogger("botLogger")
     main()

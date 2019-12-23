@@ -1,19 +1,19 @@
-from bs4 import BeautifulSoup
-import requests
 from utils import my_keyboard, cancel_keyboard
 from telegram import ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
-from database import mydatabase
-import re
 
+from parsing import get_price
+import logging
+
+module_logger = logging.getLogger("botLogger.handlers")
 
 class Handlers:
 
     def __init__(self, dbms):
         self.dbms = dbms
-        self.dbms.create_db_tables()
 
     def sms(self, bot, update):
-        print("'/start' was sent!")
+        logger = logging.getLogger("botLogger.handlers.sms")
+        logger.info("/start was received")
         # добавляем кнопки
         bot.message.reply_text("Приветствую, {}. Нажимай на нужную кнопку"
                                .format(bot.message.chat.first_name),
@@ -23,87 +23,52 @@ class Handlers:
         print(bot.message)
         # print(json.dumps(bot.message, indent=2))
 
-    def get_price(self, url):
-        r = requests.get(url)
-        html = r.text
-        soup = BeautifulSoup(html, 'lxml')
-        not_actual = soup.find('div', class_='item-view-warning-content')
-        if not not_actual:  # если объявление актуально
-            try:
-                price = soup.find('span', class_='js-item-price').text
-                try:
-                    price = int(price.replace(" ", ""))
-                    return price
-                except ValueError:
-                    print("can't price turn into int")
-            except AttributeError:
-                try:
-                    price = soup.find('span', class_='price-value-string').text
-                    return price.strip()   # Если цена Бесплатнo или не указана
-                except Exception as e:
-                    print(e)
-                    return None
-        else:
-            return "Архив"
-
-    def mobile_link(self, link):
-        if re.search(r'https://m.avito.ru/.*', link):
-            link = re.sub(r'm', "www", link, 1)
-        return link
-
     def pars(self, bot, update):
-        link = self.mobile_link(bot.message.text)
-        price = self.get_price(link)
+        price, state, archive = get_price(bot.message.text)
 
         print("avito link was sent!")
 
-        if price == "Архив":
+        if  archive:
             bot.message.reply_text("Это объявление неактульно. Попробуйте другой товар",
                                    reply_markup=cancel_keyboard())
             return "link"
 
-        elif price:
+        if state or price:
+            if state == 0:
+                bot.message.reply_text("Цена товара: {}".format(price))
+            if state == 1:
+                bot.message.reply_text("Товар отдается бесплатно")
+            if state == 2:
+                bot.message.reply_text("Цена товара не указана")
+            
             update.user_data["link"] = bot.message.text
-            print(price)
+            update.user_data['state'] = state
             update.user_data["price"] = price
-            bot.message.reply_text("Цена товара: {}".format(price))
-
             reply_keyboard = [['Да', 'Нет']]
             bot.message.reply_text("Установить наблюдение?",
                                    reply_markup=ReplyKeyboardMarkup(reply_keyboard,
                                                                     one_time_keyboard=True,
                                                                     resize_keyboard=True))
-            return "confirm"
-        else:
-            bot.message.reply_text("Цена на странице не найдена :( Попробуйте ещё",
+            return "confirm"        
+        bot.message.reply_text("Цена на странице не найдена :( Попробуйте ещё",
                                    reply_markup=cancel_keyboard())
-            return "link"
-
-    def hour_pars(self):
-        dict_to_pars = self.dbms.time_check()
-        if dict_to_pars:
-            for i in range(len(dict_to_pars)):
-                new_price = self.get_price(
-                    dict_to_pars[i][1])  # id, link, price
-                if new_price == "Архив":
-                    self.dbms.update_price(dict_to_pars[i][0], new_price)
-                    pass
-                elif new_price == None:
-                    pass
-                elif new_price != dict_to_pars[i][2]:
-                    # сделать через один запрос
-                    self.dbms.update_price(dict_to_pars[i][0], new_price)
+        return "link"
 
     def answer_yes(self, bot, update):
         try:
-            user_id = bot.effective_user.id
-            self.dbms.data_insert(
-                user_id, update.user_data["link"], update.user_data["price"])
-
-            bot.message.reply_text("Наблюдение установлено! При изменении цены вам придёт уведомление",
-                                   reply_markup=my_keyboard())
-            return -1
-
+            price = update.user_data["price"]
+            state = update.user_data["state"]
+            link = update.user_data["link"]
+            tlg_id = bot.effective_user.id
+            if self.dbms.data_insert(
+                tlg_id, link, price, state):
+                bot.message.reply_text("Наблюдение установлено! При изменении цены вам придёт уведомление",
+                                    reply_markup=my_keyboard())
+                return -1
+            else:
+                bot.message.reply_text("Наблюдение не установлено! Возможно, вы уже наблюдаете за этой ссылкой. Если вы уверены, что всё правильно, то попробуйте позже ещё раз",
+                                        reply_markup=cancel_keyboard())
+                return "link"
         except Exception as ex:
             print(ex)
         return -1
@@ -120,7 +85,7 @@ class Handlers:
 
     def not_link(self, bot, update):
         print(bot.message.text)
-        bot.message.reply_text("это не ссылка!")
+        bot.message.reply_text("это не ссылка!")        
 
     def donot_know(self, bot, update):
         bot.message.reply_text("Выберите сначала команду!",
@@ -131,44 +96,39 @@ class Handlers:
                                )
 
     def start_observation(self, bot, update):
-        user_id = bot.effective_user.id
-        if self.dbms.search_count(user_id) < 3:
+        tlg_id = bot.effective_user.id
+        count = self.dbms.search_count(tlg_id)
+        if count < 3:
             bot.message.reply_text("пришлите ссылку на товар",
                                    reply_markup=cancel_keyboard())
-
             return "link"
         else:
             bot.message.reply_text("уже три ссылки под наблюдением, удалите ненужные",
                                    reply_markup=my_keyboard())
-
             return -1
 
     def delete_all(self, bot, update):
-        user_id = bot.effective_user.id
-        if self.dbms.delete_link(user_id):
-
-            bot.message.reply_text("У вас больше нет подписок!",
+        tlg_id = bot.effective_user.id
+        self.dbms.delete_link(tlg_id)
+        bot.message.reply_text("У вас больше нет подписок!",
                                    reply_markup=my_keyboard())
-
-        else:
-            pass
         return -1
 
     def subscription(self, bot, update):
         try:
-            user_id = bot.effective_user.id
-            list_of_links = self.dbms.search(user_id)
+            tlg_id = bot.effective_user.id
+            list_of_links = self.dbms.search(tlg_id)
             if len(list_of_links) > 0:
                 reply_keyboard = [['Назад', 'Отписаться от всего']]
 
                 #update.user_data["number_links"] = len(list_of_links)
 
-                for key, link in list_of_links.items():
+                for link in list_of_links:
                     keyboard = [[InlineKeyboardButton(
-                        "Отписаться от рассылки по этому товару", callback_data='Delete:' + str(key))]]
+                        "Отписаться от рассылки по этому товару", callback_data='Delete:' + str(link.id))]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
 
-                    bot.message.reply_text("{}".format(link),
+                    bot.message.reply_text("{}".format(link.link),
                                            reply_markup=reply_markup)
 
                 bot.message.reply_text("Для отписки от *ВСЕХ* рассылок нажмите кнопку",
@@ -188,11 +148,11 @@ class Handlers:
 
     def button_del(self, update, context):
         print(context.match)
-        user_id = update.effective_user.id
+        tlg_id = update.effective_user.id
         query = update.callback_query
         link_id = context.match[2]  # query.message.text
         print(link_id)
-        if self.dbms.delete_link(user_id, link_id):
+        if self.dbms.delete_link(tlg_id, link_id):
             keyboard = [[InlineKeyboardButton(
                 "Удалено", callback_data='Done')]]
             context.bot.edit_message_reply_markup(
@@ -202,3 +162,36 @@ class Handlers:
             )
         else:
             pass
+
+
+def send_alarm(bot, notification):
+    try:
+        logger = logging.getLogger("botLogger.handlers.send_alarm")      
+
+        if notification["archive"]:
+            bot.send_message(notification["tlg_id"], "Объявление снято с публикации! Его отслеживание прекращено {0} "
+                             .format(notification["link"]))
+            logger.info("message was sent: ", notification["tlg_id"], "Объявление снято с публикации! Его отслеживание прекращено {0} "
+                        .format(notification["link"]))
+            return
+        if notification["old"]:
+            bot.send_message(notification["tlg_id"], "Закончился срок отслеживания объявления {0} "
+                            .format(notification["link"]))
+            logger.info("message was sent: ", notification["tlg_id"], "Закончился срок отслеживания объявления {0} "
+                        .format(notification["link"]))
+            return                            
+        if not notification["price"]:
+            notification["price"] = "не указана"
+        elif not notification["new_price"]:
+            notification["new_price"] = "не указана"
+        #bot.sendMessage(chat_id=chat_id, text=msg)
+        bot.send_message(notification["tlg_id"], "Цена на отслеживаемый товар изменилась! {0}, предыдущая цена: {1}. <b>Новая цена: {2} </b>"
+                         .format(notification["link"], notification["price"], notification["new_price"]),
+                        parse_mode="HTML")
+        "Закончился срок отслеживания объявления {0} "
+        logger.info("message was sent: " + str(notification["tlg_id"]) + "Цена на отслеживаемый товар изменилась! {0}, предыдущая цена: {1}. Новая цена: {2}"
+            .format(notification["link"], notification["price"], notification["new_price"]))
+    except Exception as ex:
+        print(ex)
+        logger.exception(ex)
+        
