@@ -171,7 +171,7 @@ def send_alarm(bot, notification):
         if notification["archive"]:
             bot.send_message(notification["tlg_id"], "Объявление снято с публикации! Его отслеживание прекращено {0} "
                              .format(notification["link"]))
-            logger.info("message was sent: ", notification["tlg_id"], "Объявление снято с публикации! Его отслеживание прекращено {0} "
+            logger.info("message was sent: ", notification["tlg_id"], " Объявление снято с публикации! Его отслеживание прекращено {0} "
                         .format(notification["link"]))
             return
         if notification["old"]:
@@ -185,10 +185,10 @@ def send_alarm(bot, notification):
         elif not notification["new_price"]:
             notification["new_price"] = "не указана"
         #bot.sendMessage(chat_id=chat_id, text=msg)
-        bot.send_message(notification["tlg_id"], "Цена на отслеживаемый товар изменилась! {0}, предыдущая цена: {1}. <b>Новая цена: {2} </b>"
-                         .format(notification["link"], notification["price"], notification["new_price"]),
+        bot.send_message(notification["tlg_id"], "Цена на отслеживаемый товар изменилась! {0}, предыдущая цена: {1}. <b>Новая цена: {2} </b>"\
+            .format(notification["link"], notification["price"], notification["new_price"]),
                         parse_mode="HTML")
-        "Закончился срок отслеживания объявления {0} "
+        
         logger.info("message was sent: " + str(notification["tlg_id"]) + "Цена на отслеживаемый товар изменилась! {0}, предыдущая цена: {1}. Новая цена: {2}"
             .format(notification["link"], notification["price"], notification["new_price"]))
     except Exception as ex:

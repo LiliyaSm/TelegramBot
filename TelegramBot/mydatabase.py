@@ -112,9 +112,10 @@ class MyDatabase:
         if not link_present:  # there is no link in the database
             a.link = Link(link=link, price=price, state=state)
         else:  # found one in the database
-            checking = self.session.query(
-                Association).join(User).filter(link_present.id == Association.link_id).filter(User.tlg_id == tlg_id).one_or_none()
-            if checking:
+            belong_to_user = self.session.query(
+                Association).join(User).filter(link_present.id == Association.link_id)\
+                .filter(User.tlg_id == tlg_id).one_or_none()
+            if belong_to_user:
                 return False
             else:    
                 a.link_id = link_present.id  # there is a link in the database, write only in Association
@@ -181,7 +182,6 @@ class MyDatabase:
                         self.session.query(Association)\
                             .filter(Association.user_id == userId)\
                             .delete()
-
                 self.session.commit()
             except Exception as e:
                 print(e)
@@ -190,15 +190,14 @@ class MyDatabase:
 
     def get_tlg_id(self, link_id):
         user = self.session.query(User.tlg_id).join(Association, Link).\
-                            filter(Link.id == link_id).first()
-        return user.tlg_id
-
+                            filter(Link.id == link_id).all()
+        return user
 
     def hour_pars(self, notify):
         logger = logging.getLogger("botLogger.mydatabase.hour_pars")
         logger.info("hour parsing started")
 
-        threading.Timer(360.0, self.hour_pars, [notify]).start()
+        threading.Timer(3600.0, self.hour_pars, [notify]).start()
         link_to_pars = True
         now = datetime.utcnow()
         hour_ago = now - timedelta(minutes=2)
@@ -219,16 +218,21 @@ class MyDatabase:
                     }
                     if archive:                    
                         #link_to_pars.archive = 1
-                        notification["tlg_id"] = self.get_tlg_id(link_to_pars.id)
-                        self.delete_link(notification["tlg_id"], link_to_pars.id)
-                        notify(notification)
+                        tlg_id_list = self.get_tlg_id(link_to_pars.id)
+                        for tlg_id in tlg_id_list:
+                            notification["tlg_id"] = tlg_id
+                            self.delete_link(notification["tlg_id"], link_to_pars.id)
+                            notify(notification)
                         break
                     else:
                         if link_to_pars.price != new_price:
-                            notification["tlg_id"] = self.get_tlg_id(link_to_pars.id)
-                            notify(notification)
+                            tlg_id_list = self.get_tlg_id(link_to_pars.id)
+                            for tlg_id in tlg_id_list:
+                                notification["tlg_id"] = tlg_id.tlg_id
+                                notify(notification)
+                            link_to_pars.price = new_price
                         link_to_pars.state = state
-                        link_to_pars.price = new_price
+                        
                     now = datetime.utcnow()
                     link_to_pars.updated_at = now
             self.session.commit()
@@ -262,10 +266,12 @@ class MyDatabase:
                         "old" : True
                     }
                     notify(notification)
-                    if(self.session.query(Association).filter(Association.link_id == row.link.id).count() == 1):
+                    count = self.session.query(Association).filter(
+                        Association.link_id == row.link.id).count()
+                    if(count == 1):
                         self.session.query(Link).filter(Link.id == row.link_id).delete()
                     self.session.query(Association).filter(
-                        Association.link_id == row.link.id).delete()
+                        Association.user_id == row.user.id).delete()
             self.session.commit()
             logger.info("old links deleting successfully ended")
         except Exception as ex:
