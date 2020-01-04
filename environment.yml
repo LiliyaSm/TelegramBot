@@ -7,5 +7,6 @@ dependencies:
   - sqlalchemy
   - beautifulsoup4
   - requests
+  - lxml
 prefix: C:\Users\lilii\Anaconda3\envs\tlg-bot
 

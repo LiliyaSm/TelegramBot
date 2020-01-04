@@ -85,7 +85,7 @@ class Handlers:
 
     def not_link(self, bot, update):
         print(bot.message.text)
-        bot.message.reply_text("это не ссылка!")        
+        bot.message.reply_text("это не ссылка на avito.ru или в ссылке есть ошибки!")        
 
     def donot_know(self, bot, update):
         bot.message.reply_text("Выберите сначала команду!",

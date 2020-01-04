@@ -37,7 +37,7 @@ def main():
     dbms.del_old(lambda notification: send_alarm(
       bot, notification))
 
-    expression = r'(https://[a-z]{1,3}.avito.ru/.*)'
+    expression = r'(^https://[a-z]{1,3}.avito.ru/.*)'
 
     updater.dispatcher.add_handler(
         ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), hd.start_observation)

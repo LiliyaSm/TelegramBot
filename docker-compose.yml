@@ -4,3 +4,9 @@ services:
   telegrambot:
     image: telegrambot
     build: .
+    volumes:
+      # map database from host to docker container
+      - ./db/data.db:/app/data.db
+      # map settings from host to docker
+      - ./settings.py:/app/TelegramBot/settings.py
+  

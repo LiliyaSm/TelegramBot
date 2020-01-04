@@ -24,4 +24,6 @@
 **/*.log
 **/*.db
 **/*.sqlite
+# ignore settings.py file (private user configs)
+**/settings.py
 README.md
