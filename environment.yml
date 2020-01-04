@@ -1,0 +1,11 @@
+name: tlg-bot
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python-telegram-bot
+  - sqlalchemy
+  - beautifulsoup4
+  - requests
+prefix: C:\Users\lilii\Anaconda3\envs\tlg-bot
+

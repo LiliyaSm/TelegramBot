@@ -250,7 +250,7 @@ class MyDatabase:
 
         threading.Timer(86400.0, self.del_old, [notify]).start()
         now = datetime.utcnow()
-        two_week_ago = now - timedelta(days=14)                      
+        two_week_ago = now - timedelta(days=3)                      
         try:
             to_del = self.session.query(Association).join(User, Link).filter(
                         Association.created_at < two_week_ago).all()
