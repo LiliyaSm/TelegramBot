@@ -200,7 +200,7 @@ class MyDatabase:
         threading.Timer(3600.0, self.hour_pars, [notify]).start()
         link_to_pars = True
         now = datetime.utcnow()
-        hour_ago = now - timedelta(minutes=2)
+        hour_ago = now - timedelta(minutes=60)
         try:
             while link_to_pars:                
                 link_to_pars = self.session.query(Link).filter(
@@ -220,7 +220,7 @@ class MyDatabase:
                         #link_to_pars.archive = 1
                         tlg_id_list = self.get_tlg_id(link_to_pars.id)
                         for tlg_id in tlg_id_list:
-                            notification["tlg_id"] = tlg_id
+                            notification["tlg_id"] = tlg_id.tlg_id
                             self.delete_link(notification["tlg_id"], link_to_pars.id)
                             notify(notification)
                         break

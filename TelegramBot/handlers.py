@@ -3,6 +3,7 @@ from telegram import ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMa
 
 from parsing import get_price
 import logging
+import re
 
 module_logger = logging.getLogger("botLogger.handlers")
 
@@ -24,7 +25,9 @@ class Handlers:
         # print(json.dumps(bot.message, indent=2))
 
     def pars(self, bot, update):
-        price, state, archive = get_price(bot.message.text)
+        url = re.search(
+            r'https://[a-z]{1,3}.avito.ru/.*', bot.message.text.lower()).group(0)
+        price, state, archive = get_price(url)
 
         print("avito link was sent!")
 

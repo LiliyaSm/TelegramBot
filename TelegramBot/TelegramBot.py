@@ -37,7 +37,8 @@ def main():
     dbms.del_old(lambda notification: send_alarm(
       bot, notification))
 
-    expression = r'(^https://[a-z]{1,3}.avito.ru/.*)'
+    expression = r'^(?i).*(https://[a-z]{1,3}.avito.ru/.*)'
+    
 
     updater.dispatcher.add_handler(
         ConversationHandler(entry_points=[MessageHandler(Filters.regex("Установить наблюдение"), hd.start_observation)
@@ -85,6 +86,6 @@ def main():
 
 if __name__ == '__main__':
     logging.config.fileConfig(
-        fname='file.conf', disable_existing_loggers=False)
+        fname='../file.conf', disable_existing_loggers=False)
     logger = logging.getLogger("botLogger")
     main()
