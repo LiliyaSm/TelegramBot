@@ -19,7 +19,7 @@ Base = declarative_base()
 
 class Association(Base):
     __tablename__ = 'association'
-    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True) # unic id
+    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True) # unique id
     link_id = Column(Integer, ForeignKey('links.id'), primary_key=True)
     created_at = Column(sa.DateTime())
 
@@ -127,7 +127,11 @@ class MyDatabase:
     def search_count(self, tlg_id):
         # query = "SELECT COUNT(*) FROM USERS WHERE tlg_id = {};".format(tlg_id)
         try:
-            count = self.session.query(Association, User).filter(User.tlg_id == tlg_id).count()
+            
+
+            query = self.session.query(Association).join(User).filter(User.tlg_id == tlg_id)
+            count = query.with_entities(func.count(Association.link_id)).scalar()
+            
         except Exception as e:
             print(e)
         return count
@@ -271,10 +275,10 @@ class MyDatabase:
                     if(count == 1):
                         self.session.query(Link).filter(Link.id == row.link_id).delete()
                     self.session.query(Association).filter(
-                        Association.user_id == row.user.id).delete()
+                        Association.user_id == row.user_id, Association.link_id == row.link_id).delete()  # Association.id == row.id
             self.session.commit()
             logger.info("old links deleting successfully ended")
         except Exception as ex:
             print(ex)
-            logger.exception("Error while deleting old links!" + str(ex) +
-                             "links to del: " + str (to_del))
+            logger.exception("Error while deleting old links!" + str(ex)
+                             )

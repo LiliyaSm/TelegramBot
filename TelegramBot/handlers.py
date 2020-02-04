@@ -44,7 +44,7 @@ class Handlers:
             if state == 2:
                 bot.message.reply_text("Цена товара не указана")
             
-            update.user_data["link"] = bot.message.text
+            update.user_data["link"] = url
             update.user_data['state'] = state
             update.user_data["price"] = price
             reply_keyboard = [['Да', 'Нет']]
@@ -174,13 +174,13 @@ def send_alarm(bot, notification):
         if notification["archive"]:
             bot.send_message(notification["tlg_id"], "Объявление снято с публикации! Его отслеживание прекращено {0} "
                              .format(notification["link"]))
-            logger.info("message was sent: ", notification["tlg_id"], " Объявление снято с публикации! Его отслеживание прекращено {0} "
+            logger.info("message was sent: " + str(notification["tlg_id"]) +" Объявление снято с публикации! Его отслеживание прекращено {0} "
                         .format(notification["link"]))
             return
         if notification["old"]:
             bot.send_message(notification["tlg_id"], "Закончился срок отслеживания объявления {0} "
                             .format(notification["link"]))
-            logger.info("message was sent: ", notification["tlg_id"], "Закончился срок отслеживания объявления {0} "
+            logger.info("message was sent: " + str(notification["tlg_id"]) + " Закончился срок отслеживания объявления {0} "
                         .format(notification["link"]))
             return                            
         if not notification["price"]:

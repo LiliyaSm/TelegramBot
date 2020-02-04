@@ -86,6 +86,6 @@ def main():
 
 if __name__ == '__main__':
     logging.config.fileConfig(
-        fname='../file.conf', disable_existing_loggers=False)
+        fname='file.conf', disable_existing_loggers=False)
     logger = logging.getLogger("botLogger")
     main()
